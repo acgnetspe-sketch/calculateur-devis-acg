@@ -101,6 +101,41 @@ describe('PDF sur plusieurs pages', () => {
   });
 });
 
+/** Petit logo PNG (60 × 40 pixels) pour les tests. */
+const LOGO_TEST = {
+  dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAAoCAYAAACiu5n/AAAAUElEQVR4nO3PQRGAMADAsLHvPOAA//KYi3EXGgXtte7nHT8yvw44rWFdw7qGdQ3rGtY1rGtY17CuYV3DuoZ1Desa1jWsa1jXsK5hXcO6hnUbLy4Bpf1O4zAAAAAASUVORK5CYII=',
+  largeur: 60,
+  hauteur: 40,
+};
+
+describe('PDF avec logo', () => {
+  it('le logo est en bas de chaque page, l’en-tête garde « ACG NET SPE »', async () => {
+    const d = donneesCasA();
+    d.devis.lignes = Array.from({ length: 26 }, (_, i) => ({ ...d.devis.lignes[0], id: `l${i}` }));
+    const doc = genererPdf({ ...d, logo: LOGO_TEST });
+    const pages = await lirePages(doc);
+    expect(pages.length).toBeGreaterThanOrEqual(2);
+    pages.forEach((p, i) => {
+      expect(p).toContain(`${i + 1}/${pages.length}`);
+      expect(p).toContain('SIREN 910 204 262');
+    });
+    expect(pages[0]).toMatch(/^ACG NET SPE/);
+    // Une seule image dans le fichier…
+    expect(doc.output().match(/\/Subtype \/Image/g)).toHaveLength(1);
+    // … dessinée sur chaque page.
+    const { OPS } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const pdf = await getDocument({ data: new Uint8Array(doc.output('arraybuffer')) }).promise;
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const ops = await (await pdf.getPage(i)).getOperatorList();
+      expect(ops.fnArray.filter((f) => f === OPS.paintImageXObject)).toHaveLength(1);
+    }
+  });
+
+  it('cas A avec logo : toujours une seule page', async () => {
+    expect(await lirePages(genererPdf({ ...donneesCasA(), logo: LOGO_TEST }))).toHaveLength(1);
+  });
+});
+
 describe('textes du PDF', () => {
   it('nom du fichier : DEV-2026-001_Client_Site.pdf', () => {
     const { devis, client } = donneesCasA();

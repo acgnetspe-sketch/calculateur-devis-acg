@@ -32,8 +32,12 @@ const LARGEUR_PAGE = 210;
 const HAUTEUR_PAGE = 297;
 const MARGE = 15;
 const LARGEUR_UTILE = LARGEUR_PAGE - 2 * MARGE;
-/** Espace réservé en bas de page pour le pied de page. */
+/** Espace réservé en bas de page pour le pied de page (plus haut avec le logo). */
 const BAS = 24;
+const BAS_AVEC_LOGO = 31;
+/** Taille maximale du logo en bas de page, en mm. */
+const LOGO_HAUTEUR_MAX = 18;
+const LOGO_LARGEUR_MAX = 30;
 
 const LIBELLES_POINT_EAU: Record<PointEau, string> = { oui: 'oui', non: 'non', a_verifier: 'à vérifier' };
 
@@ -96,6 +100,7 @@ export function mentionsLegales(p: Parametres): string {
 export function genererPdf({ devis, client, parametres, logo }: DonneesPdf): jsPDF {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
   const ent = parametres.entreprise;
+  const bas = logo ? BAS_AVEC_LOGO : BAS;
   const resultat = calculerDevis(devis, parametres);
   const t = resultat.totaux;
   doc.setProperties({ title: `Devis ${devis.numero}`, author: ent.nom, subject: objetDevis(devis.lignes, devis.site), creator: 'Calculateur de devis ACG NET SPE' });
@@ -115,24 +120,17 @@ export function genererPdf({ devis, client, parametres, logo }: DonneesPdf): jsP
   let y = MARGE;
   /** Passe à la page suivante si le bloc ne tient pas. */
   const place = (hauteur: number) => {
-    if (y + hauteur > HAUTEUR_PAGE - BAS) {
+    if (y + hauteur > HAUTEUR_PAGE - bas) {
       doc.addPage();
       y = MARGE;
     }
   };
 
-  // ---------- En-tête ----------
-  if (logo) {
-    const hMax = 18;
-    const lMax = 60;
-    const ratio = Math.min(lMax / logo.largeur, hMax / logo.hauteur);
-    doc.addImage(logo.dataUrl, 'PNG', MARGE, y, logo.largeur * ratio, logo.hauteur * ratio);
-  } else {
-    doc.setFillColor(...JAUNE);
-    doc.rect(MARGE, y + 1, 8, 8, 'F');
-    police(17, 'bold');
-    ecrire(ent.nom || 'ACG NET SPE', MARGE + 11, y + 1.2);
-  }
+  // ---------- En-tête (le logo, s'il existe, est en bas de chaque page) ----------
+  doc.setFillColor(...JAUNE);
+  doc.rect(MARGE, y + 1, 8, 8, 'F');
+  police(17, 'bold');
+  ecrire(ent.nom || 'ACG NET SPE', MARGE + 11, y + 1.2);
   police(26, 'bold');
   ecrire('DEVIS', LARGEUR_PAGE - MARGE, y - 1, { align: 'right' });
   police(9.5);
@@ -237,7 +235,7 @@ export function genererPdf({ devis, client, parametres, logo }: DonneesPdf): jsP
     head: [['Désignation', 'Quantité', 'Unité', 'Prix unitaire HT', 'Total HT']],
     body: corps,
     theme: 'plain',
-    margin: { left: MARGE, right: MARGE, top: MARGE, bottom: BAS },
+    margin: { left: MARGE, right: MARGE, top: MARGE, bottom: bas },
     showHead: 'everyPage',
     rowPageBreak: 'avoid',
     styles: { font: 'helvetica', fontSize: 9, textColor: BLEU, cellPadding: { top: 2.2, bottom: 2.2, left: 2.5, right: 2.5 }, valign: 'top' },
@@ -377,16 +375,32 @@ export function genererPdf({ devis, client, parametres, logo }: DonneesPdf): jsP
   // ---------- Pied de page (toutes les pages) ----------
   const total = doc.getNumberOfPages();
   const mentions = textePdf(mentionsLegales(parametres));
+  const tailleLogo = logo
+    ? (() => {
+        const ratio = Math.min(LOGO_LARGEUR_MAX / logo.largeur, LOGO_HAUTEUR_MAX / logo.hauteur);
+        return { l: logo.largeur * ratio, h: logo.hauteur * ratio };
+      })()
+    : null;
   for (let i = 1; i <= total; i++) {
     doc.setPage(i);
-    const yPied = HAUTEUR_PAGE - 15;
+    const basPied = HAUTEUR_PAGE - 7;
+    const yTrait = tailleLogo ? basPied - LOGO_HAUTEUR_MAX - 2.5 : HAUTEUR_PAGE - 18;
     doc.setDrawColor(...GRIS_TRAIT);
     doc.setLineWidth(0.3);
-    doc.line(MARGE, yPied - 3, LARGEUR_PAGE - MARGE, yPied - 3);
+    doc.line(MARGE, yTrait, LARGEUR_PAGE - MARGE, yTrait);
+    let xTexte = MARGE;
+    let yTexte = yTrait + 3;
+    if (logo && tailleLogo) {
+      // Logo en bas à gauche, centré dans la hauteur du pied de page.
+      const yLogo = yTrait + 1.5 + (LOGO_HAUTEUR_MAX - tailleLogo.h) / 2;
+      doc.addImage(logo.dataUrl, 'PNG', MARGE, yLogo, tailleLogo.l, tailleLogo.h, 'logo', 'FAST');
+      xTexte = MARGE + tailleLogo.l + 5;
+      yTexte = yTrait + 1.5 + LOGO_HAUTEUR_MAX / 2 - 3;
+    }
     police(7.5, 'normal', GRIS);
-    const lignes = doc.splitTextToSize(mentions, LARGEUR_UTILE - 22) as string[];
-    doc.text(lignes, MARGE, yPied, { baseline: 'top' });
-    doc.text(`${i}/${total}`, LARGEUR_PAGE - MARGE, yPied, { baseline: 'top', align: 'right' });
+    const lignes = doc.splitTextToSize(mentions, LARGEUR_PAGE - MARGE - xTexte - 12) as string[];
+    doc.text(lignes, xTexte, yTexte, { baseline: 'top' });
+    doc.text(`${i}/${total}`, LARGEUR_PAGE - MARGE, yTexte, { baseline: 'top', align: 'right' });
   }
   doc.setPage(total);
   return doc;

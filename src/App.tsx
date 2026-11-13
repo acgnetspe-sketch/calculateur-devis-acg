@@ -30,6 +30,22 @@ function lireAdresse(): Adresse {
   return { page: PAGES.some((x) => x.page === p) ? (p as Page) : 'devis' };
 }
 
+/** Logo de l'entreprise (ou carré jaune) et nom, renvoie à la liste des devis. */
+function Marque({ logo, nom }: { logo?: string; nom: string }) {
+  return (
+    <a className="marque" href="#/devis" aria-label={`${nom} – liste des devis`}>
+      {logo ? (
+        <span className="marque-logo">
+          <img src={logo} alt="" />
+        </span>
+      ) : (
+        <span className="carre-jaune" aria-hidden="true" />
+      )}
+      <span>{nom}</span>
+    </a>
+  );
+}
+
 function naviguer(adresse: string) {
   window.location.hash = adresse;
 }
@@ -37,7 +53,9 @@ function naviguer(adresse: string) {
 export default function App() {
   const [adresse, setAdresse] = useState<Adresse>(lireAdresse);
   const page = adresse.page;
-  const { enregistrementOk } = useDonnees();
+  const { enregistrementOk, etat } = useDonnees();
+  const logo = etat.parametres.entreprise.logo;
+  const nom = etat.parametres.entreprise.nom || 'ACG NET SPE';
   const { nouvelleVersion, mettreAJour, enLigne } = useHorsConnexion();
 
   useEffect(() => {
@@ -52,11 +70,12 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Sur iPad, le menu est en bas : le logo est affiché dans une bande en haut. */}
+      <header className="entete-tactile">
+        <Marque logo={logo} nom={nom} />
+      </header>
       <nav className="menu" aria-label="Menu principal">
-        <a className="marque" href="#/devis">
-          <span className="carre-jaune" aria-hidden="true" />
-          <span>ACG NET SPE</span>
-        </a>
+        <Marque logo={logo} nom={nom} />
         <ul>
           {PAGES.map((p) => (
             <li key={p.page}>

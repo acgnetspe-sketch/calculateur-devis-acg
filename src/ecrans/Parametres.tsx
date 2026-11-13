@@ -6,10 +6,10 @@ import { BadgeProvisoire, ChampListe, ChampMontant, ChampNombre, ChampTexte, Sec
 import { useDonnees } from '../donnees/Donnees';
 import { dupliquerGrille, enregistrerGrille, supprimerGrille } from '../donnees/stockage';
 import type { Entreprise, Parametres as TParametres } from '../modele/types';
+import { reduireImage } from '../donnees/image';
 import { EditeurGrille } from './EditeurGrille';
 import { Sauvegarde } from './Sauvegarde';
 
-const TAILLE_MAX_LOGO = 300 * 1024;
 
 const CHAMPS_ENTREPRISE: { cle: keyof Entreprise; label: string; type?: 'email' | 'tel' | 'url'; aide?: string }[] = [
   { cle: 'nom', label: 'Dénomination' },
@@ -46,20 +46,20 @@ export function Parametres() {
   const prochain = prochainNumero(p.numerotation.prefixe, anneeCourante, compteur, etat.devis.map((d) => d.numero)).numero;
   const nbProvisoires = p.provisoires.length + etat.grilles.reduce((n, g) => n + g.options.filter((o) => o.provisoire).length + (g.elagage.provisoire ? 1 : 0), 0);
 
-  const lireLogo = (fichier: File | undefined) => {
+  const lireLogo = async (fichier: File | undefined) => {
     setErreurLogo(null);
     if (!fichier) return;
-    if (!['image/png', 'image/jpeg', 'image/svg+xml'].includes(fichier.type)) {
-      setErreurLogo('Format accepté : PNG, JPEG ou SVG.');
+    if (fichier.type && !fichier.type.startsWith('image/')) {
+      setErreurLogo('Choisissez une image (PNG, JPEG, SVG ou photo).');
       return;
     }
-    if (fichier.size > TAILLE_MAX_LOGO) {
-      setErreurLogo('Fichier trop lourd : 300 Ko au maximum.');
-      return;
+    try {
+      // Les grandes images (photos de l'iPad) sont réduites automatiquement.
+      const logo = await reduireImage(fichier);
+      maj(null, (x) => ({ ...x, entreprise: { ...x.entreprise, logo } }));
+    } catch {
+      setErreurLogo("Cette image n'a pas pu être lue. Essayez une image PNG ou JPEG.");
     }
-    const lecteur = new FileReader();
-    lecteur.onload = () => maj(null, (x) => ({ ...x, entreprise: { ...x.entreprise, logo: String(lecteur.result) } }));
-    lecteur.readAsDataURL(fichier);
   };
 
   return (
@@ -92,7 +92,7 @@ export function Parametres() {
         </div>
         <div className="champ">
           <div className="champ-entete">
-            <span className="label">Logo (PNG, JPEG ou SVG, 300 Ko au maximum)</span>
+            <span className="label">Logo (image, photo ou SVG)</span>
           </div>
           <div className="logo-zone">
             {p.entreprise.logo ? (
@@ -108,7 +108,7 @@ export function Parametres() {
                 id="logo"
                 type="file"
                 className="masque"
-                accept="image/png,image/jpeg,image/svg+xml"
+                accept="image/*"
                 onChange={(e) => {
                   lireLogo(e.target.files?.[0]);
                   e.target.value = '';
@@ -121,7 +121,9 @@ export function Parametres() {
               </button>
             )}
           </div>
-          {erreurLogo ? <div className="message-erreur">{erreurLogo}</div> : <div className="aide">Sans logo, le PDF affiche le carré jaune et « ACG NET SPE ».</div>}
+          {erreurLogo ? <div className="message-erreur">{erreurLogo}</div> : <div className="aide">
+              Le logo s'affiche en haut de l'application et en bas de chaque page des devis PDF. Une image au fond transparent (PNG) rend le mieux.
+            </div>}
         </div>
       </Section>
 
