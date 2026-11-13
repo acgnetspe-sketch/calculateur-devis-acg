@@ -80,7 +80,6 @@ export const PARAMETRES_DEPART: Parametres = {
     'entreprise.tva',
     'grilles',
     'textes.conditionsPaiement',
-    'options',
     'montantMinimumNettoyage',
     'rendements.heuresParJour',
     'rendements.haParJourDebroussaillage',

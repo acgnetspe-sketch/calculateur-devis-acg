@@ -109,3 +109,42 @@ export function ligneParDefaut(
       return { designation: '', unite: 'unite' };
   }
 }
+
+export const LIBELLES_UNITE: Record<Unite, string> = {
+  m2: 'm²',
+  ha: 'ha',
+  forfait: 'forfait',
+  jour: 'jour',
+  km: 'km',
+  unite: 'unité',
+};
+
+/**
+ * Contrôle d'un barème par tranches : renvoie la liste des problèmes
+ * (vide si le barème est cohérent). Les surfaces sont en m² entiers :
+ * après une tranche « jusqu'à 600 », la suivante doit commencer à 601.
+ */
+export function verifierTranches(tranches: Tranche[]): string[] {
+  const problemes: string[] = [];
+  if (tranches.length === 0) return ['Le barème doit contenir au moins une tranche.'];
+  const triees = [...tranches].sort((a, b) => a.min - b.min);
+  triees.forEach((t, i) => {
+    const n = i + 1;
+    if (t.min < 0) problemes.push(`Tranche ${n} : le minimum ne peut pas être négatif.`);
+    if (t.max !== null && t.max < t.min) problemes.push(`Tranche ${n} : le maximum est plus petit que le minimum.`);
+    if (t.prix <= 0) problemes.push(`Tranche ${n} : le prix doit être supérieur à 0.`);
+    const suivante = triees[i + 1];
+    if (suivante) {
+      if (t.max === null) {
+        problemes.push(`Tranche ${n} : seule la dernière tranche peut être sans limite.`);
+      } else if (suivante.min <= t.max) {
+        problemes.push(`Tranches ${n} et ${n + 1} : elles se chevauchent.`);
+      } else if (suivante.min > t.max + 1) {
+        problemes.push(`Tranches ${n} et ${n + 1} : les surfaces de ${t.max + 1} à ${suivante.min - 1} m² ne sont couvertes par aucune tranche.`);
+      }
+    }
+  });
+  const derniere = triees[triees.length - 1];
+  if (derniere.max !== null) problemes.push(`Dernière tranche : au-delà de ${derniere.max} m², le prix de cette tranche s'applique (laisser le maximum vide pour « sans limite »).`);
+  return problemes;
+}

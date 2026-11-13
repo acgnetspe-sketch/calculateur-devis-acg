@@ -1,32 +1,67 @@
-import { formatEuros, formatNombre } from './calcul/argent';
-import { calculerDevis } from './calcul/devis';
-import { surfaceModules } from './calcul/surface';
-import { PARAMETRES_DEPART } from './modele/valeursDepart';
+import { useEffect, useState } from 'react';
+import { useDonnees } from './donnees/Donnees';
+import { Clients } from './ecrans/Clients';
+import { ListeDevis } from './ecrans/ListeDevis';
+import { Parametres } from './ecrans/Parametres';
 
-/** Page provisoire (étape 1) : vérifie le cas A dans le navigateur. Les écrans arrivent à l'étape 2. */
+type Page = 'devis' | 'clients' | 'parametres';
+
+const PAGES: { page: Page; libelle: string; icone: string }[] = [
+  { page: 'devis', libelle: 'Devis', icone: '📄' },
+  { page: 'clients', libelle: 'Clients', icone: '👥' },
+  { page: 'parametres', libelle: 'Paramètres', icone: '⚙️' },
+];
+
+/** Page affichée, lue dans l'adresse (#/clients) pour que le bouton « retour » fonctionne. */
+function pageDepuisAdresse(): Page {
+  const p = window.location.hash.replace(/^#\/?/, '');
+  return PAGES.some((x) => x.page === p) ? (p as Page) : 'devis';
+}
+
 export default function App() {
-  const surface = surfaceModules(40_277, 1.31);
-  const { totaux } = calculerDevis(
-    {
-      lignes: [
-        { id: 'a', type: 'nettoyage', designation: '', detail: '', quantite: surface, unite: 'm2', passages: 1, prixUnitaire: 25, prixModifie: false },
-      ],
-      remise: { type: 'pourcent', valeur: 0 },
-      estimation: { robot: 'L1', personnes: 2 },
-    },
-    PARAMETRES_DEPART,
-  );
+  const [page, setPage] = useState<Page>(pageDepuisAdresse);
+  const { enregistrementOk } = useDonnees();
+
+  useEffect(() => {
+    const ecouter = () => setPage(pageDepuisAdresse());
+    window.addEventListener('hashchange', ecouter);
+    return () => window.removeEventListener('hashchange', ecouter);
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page]);
+
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: 24, color: '#0B1E2D' }}>
-      <h1>Calculateur de devis ACG NET SPE</h1>
-      <p>En construction : le moteur de calcul est prêt, les écrans arrivent à l’étape 2.</p>
-      <h2>Vérification – cas A</h2>
-      <ul>
-        <li>Surface : {formatNombre(surface)} m²</li>
-        <li>Total HT : {formatEuros(totaux.totalHt)}</li>
-        <li>TVA : {formatEuros(totaux.tva)}</li>
-        <li>TTC : {formatEuros(totaux.ttc)}</li>
-      </ul>
-    </main>
+    <div className="app">
+      <nav className="menu" aria-label="Menu principal">
+        <a className="marque" href="#/devis">
+          <span className="carre-jaune" aria-hidden="true" />
+          <span>ACG NET SPE</span>
+        </a>
+        <ul>
+          {PAGES.map((p) => (
+            <li key={p.page}>
+              <a href={`#/${p.page}`} className={page === p.page ? 'actif' : ''} aria-current={page === p.page ? 'page' : undefined}>
+                <span className="menu-icone" aria-hidden="true">
+                  {p.icone}
+                </span>
+                <span>{p.libelle}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      {!enregistrementOk && (
+        <div className="alerte alerte-erreur bandeau">
+          Attention : les données n'ont pas pu être enregistrées sur cet appareil (stockage plein ou navigation privée).
+        </div>
+      )}
+      <main className="contenu">
+        {page === 'devis' && <ListeDevis />}
+        {page === 'clients' && <Clients />}
+        {page === 'parametres' && <Parametres />}
+      </main>
+    </div>
   );
 }
