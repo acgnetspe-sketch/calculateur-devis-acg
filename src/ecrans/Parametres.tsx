@@ -7,6 +7,7 @@ import { useDonnees } from '../donnees/Donnees';
 import { dupliquerGrille, enregistrerGrille, supprimerGrille } from '../donnees/stockage';
 import type { Entreprise, Parametres as TParametres } from '../modele/types';
 import { EditeurGrille } from './EditeurGrille';
+import { Sauvegarde } from './Sauvegarde';
 
 const TAILLE_MAX_LOGO = 300 * 1024;
 
@@ -313,8 +314,8 @@ export function Parametres() {
         </div>
       </Section>
 
-      <Section titre="Sauvegarde" ouverte={false}>
-        <p className="aide">L'export et l'import du fichier de sauvegarde arrivent à l'étape 5.</p>
+      <Section titre="Sauvegarde" id="sauvegarde">
+        <Sauvegarde />
       </Section>
     </div>
   );

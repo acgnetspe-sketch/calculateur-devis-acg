@@ -9,6 +9,8 @@ export interface Etat {
   grilles: Grille[];
   clients: Client[];
   devis: Devis[];
+  /** Date (ISO) du dernier export de la sauvegarde. */
+  derniereSauvegarde?: string;
 }
 
 export const CLE_STOCKAGE = 'acg-net-spe-devis';
@@ -59,6 +61,7 @@ export function normaliser(brut: unknown): Etat {
     grilles,
     clients: Array.isArray(brut.clients) ? (brut.clients as Client[]) : [],
     devis: Array.isArray(brut.devis) ? (brut.devis as Devis[]) : [],
+    ...(typeof brut.derniereSauvegarde === 'string' ? { derniereSauvegarde: brut.derniereSauvegarde } : {}),
   };
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDonnees } from './donnees/Donnees';
+import { useHorsConnexion } from './donnees/horsConnexion';
 import { Clients } from './ecrans/Clients';
 import { Apercu } from './ecrans/Apercu';
 import { EcranDevis } from './ecrans/devis/EcranDevis';
@@ -37,6 +38,7 @@ export default function App() {
   const [adresse, setAdresse] = useState<Adresse>(lireAdresse);
   const page = adresse.page;
   const { enregistrementOk } = useDonnees();
+  const { nouvelleVersion, mettreAJour, enLigne } = useHorsConnexion();
 
   useEffect(() => {
     const ecouter = () => setAdresse(lireAdresse());
@@ -67,7 +69,20 @@ export default function App() {
             </li>
           ))}
         </ul>
+        {!enLigne && (
+          <span className="pastille-hors-ligne" role="status">
+            Hors connexion
+          </span>
+        )}
       </nav>
+      {nouvelleVersion && (
+        <div className="alerte alerte-attention bandeau bandeau-maj" role="status">
+          Une nouvelle version de l'application est prête.
+          <button type="button" className="bouton principal" onClick={mettreAJour}>
+            Mettre à jour
+          </button>
+        </div>
+      )}
       {!enregistrementOk && (
         <div className="alerte alerte-erreur bandeau">
           Attention : les données n'ont pas pu être enregistrées sur cet appareil (stockage plein ou navigation privée).

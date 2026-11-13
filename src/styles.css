@@ -1018,3 +1018,44 @@ ul.alerte {
   border: 1px solid var(--bordure);
   background: var(--blanc);
 }
+
+/* ---------- Hors connexion et mise à jour ---------- */
+.pastille-hors-ligne {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--jaune);
+  color: var(--bleu);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+@media (max-width: 1024px) and (pointer: coarse), (max-width: 700px) {
+  .pastille-hors-ligne {
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top));
+    right: 12px;
+  }
+}
+.bandeau-maj {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+/* Application ouverte depuis l'écran d'accueil : marge sous la barre d'état. */
+@media (display-mode: standalone) {
+  .contenu {
+    padding-top: calc(24px + env(safe-area-inset-top));
+  }
+}
+.sauvegarde-retour {
+  margin-top: 14px;
+}
+.sauvegarde-retour p {
+  margin: 0 0 8px;
+}
+.sauvegarde .bouton {
+  cursor: pointer;
+}
