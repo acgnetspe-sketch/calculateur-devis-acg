@@ -21,8 +21,21 @@ npm run preview    # essaie cette version, avec le fonctionnement hors connexion
 Pour être installée et marcher hors connexion, l'application doit être en ligne sur une adresse sécurisée (https).
 Deux solutions gratuites :
 
-- **Netlify Drop** : lancer `npm run build`, puis glisser le dossier `dist/` sur <https://app.netlify.com/drop>.
-- **GitHub Pages** : publier le contenu du dossier `dist/` (voir la documentation de GitHub Pages).
+- **GitHub Pages** (mise en ligne automatique, déjà préparée dans `.github/workflows/mise-en-ligne.yml`) :
+  1. Le dépôt doit être **public**, ou le compte doit avoir **GitHub Pro** (Pages n'est pas disponible
+     pour un dépôt privé sur un compte gratuit).
+  2. Sur GitHub : **Settings → Pages → Build and deployment → Source : « GitHub Actions »**.
+  3. Onglet **Actions** → « Mise en ligne (GitHub Pages) » → **Run workflow** (ou envoyer un nouveau commit).
+  4. L'adresse s'affiche à la fin : <https://acgnetspe-sketch.github.io/calculateur-devis-acg/>.
+
+  Ensuite, chaque envoi sur la branche principale relance les tests puis met l'application à jour
+  (si un test échoue, rien n'est publié).
+- **Netlify Drop** (sans GitHub, fonctionne aussi avec un dépôt privé) : lancer `npm run build`, puis glisser
+  le dossier `dist/` sur <https://app.netlify.com/drop>. À refaire à chaque nouvelle version.
+
+Le site publié ne contient que l'application : aucun client ni devis n'y est envoyé (les données restent sur
+l'appareil). En revanche, les grilles tarifaires **de départ** font partie du code, donc sont lisibles par
+quiconque a l'adresse.
 
 Puis, sur l'iPad :
 

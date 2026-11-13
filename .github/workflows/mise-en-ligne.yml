@@ -1,0 +1,55 @@
+# Mise en ligne automatique sur GitHub Pages.
+# À chaque envoi sur la branche principale : vérification des calculs (tests),
+# construction de l'application, puis publication.
+# Prérequis (une seule fois) : Settings → Pages → Source : « GitHub Actions ».
+name: Mise en ligne (GitHub Pages)
+
+on:
+  push:
+    branches:
+      - main
+      - claude/calculateur-devis-acg-bxgsty
+  # Bouton « Run workflow » dans l'onglet Actions, pour relancer à la main.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Une seule mise en ligne à la fois ; la plus récente gagne.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  construire:
+    name: Tests et construction
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Installation
+        run: npm ci
+      - name: Tests des calculs et du PDF
+        run: npm test
+      - name: Construction
+        run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  publier:
+    name: Publication
+    needs: construire
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publication.outputs.page_url }}
+    steps:
+      - id: publication
+        uses: actions/deploy-pages@v4
