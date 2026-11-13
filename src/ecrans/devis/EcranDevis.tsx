@@ -427,7 +427,7 @@ export function EcranDevis({ id, naviguer }: { id: string; naviguer: (adresse: s
           manquants={manquants}
           alertes={alertes}
           onEstimation={(estimation) => maj((d) => ({ ...d, estimation }))}
-          onApercu={() => window.alert("L'aperçu et le PDF arrivent à l'étape 4.")}
+          onApercu={() => naviguer(`#/devis/${id}/apercu`)}
         />
       </div>
     </div>

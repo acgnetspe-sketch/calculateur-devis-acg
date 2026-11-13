@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDonnees } from './donnees/Donnees';
 import { Clients } from './ecrans/Clients';
+import { Apercu } from './ecrans/Apercu';
 import { EcranDevis } from './ecrans/devis/EcranDevis';
 import { ListeDevis } from './ecrans/ListeDevis';
 import { Parametres } from './ecrans/Parametres';
@@ -17,12 +18,14 @@ interface Adresse {
   page: Page;
   /** Identifiant du devis ouvert (#/devis/<id>). */
   devisId?: string;
+  /** Aperçu du PDF (#/devis/<id>/apercu). */
+  apercu?: boolean;
 }
 
 /** Page affichée, lue dans l'adresse (#/clients, #/devis/<id>) pour que le bouton « retour » fonctionne. */
 function lireAdresse(): Adresse {
-  const [p, id] = window.location.hash.replace(/^#\/?/, '').split('/');
-  if (p === 'devis' && id) return { page: 'devis', devisId: decodeURIComponent(id) };
+  const [p, id, sous] = window.location.hash.replace(/^#\/?/, '').split('/');
+  if (p === 'devis' && id) return { page: 'devis', devisId: decodeURIComponent(id), apercu: sous === 'apercu' };
   return { page: PAGES.some((x) => x.page === p) ? (p as Page) : 'devis' };
 }
 
@@ -43,7 +46,7 @@ export default function App() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [page, adresse.devisId]);
+  }, [page, adresse.devisId, adresse.apercu]);
 
   return (
     <div className="app">
@@ -72,7 +75,8 @@ export default function App() {
       )}
       <main className="contenu">
         {page === 'devis' && !adresse.devisId && <ListeDevis naviguer={naviguer} />}
-        {page === 'devis' && adresse.devisId && <EcranDevis key={adresse.devisId} id={adresse.devisId} naviguer={naviguer} />}
+        {page === 'devis' && adresse.devisId && !adresse.apercu && <EcranDevis key={adresse.devisId} id={adresse.devisId} naviguer={naviguer} />}
+        {page === 'devis' && adresse.devisId && adresse.apercu && <Apercu key={adresse.devisId} id={adresse.devisId} naviguer={naviguer} />}
         {page === 'clients' && <Clients />}
         {page === 'parametres' && <Parametres />}
       </main>
