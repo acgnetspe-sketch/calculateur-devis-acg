@@ -1,4 +1,5 @@
 import type { Client, Devis, Grille, Parametres } from '../modele/types';
+import { prochainNumero } from '../calcul/numerotation';
 import { GRILLES_DEPART, PARAMETRES_DEPART } from '../modele/valeursDepart';
 
 /** Toutes les données de l'application, enregistrées dans le navigateur. */
@@ -134,4 +135,82 @@ export function supprimerGrille(etat: Etat, id: string): Etat {
 /** Copie d'une grille, sous un nouveau nom. */
 export function dupliquerGrille(grille: Grille, nom: string): Grille {
   return { ...structuredClone(grille), id: nouvelId(), nom };
+}
+
+// ---------- Devis ----------
+
+/**
+ * Crée un devis brouillon avec le prochain numéro de l'année.
+ * Le compteur est avancé tout de suite : un numéro n'est jamais redonné, même si le devis est supprimé.
+ */
+export function creerDevis(etat: Etat, dateIso: string, clientId: string | null = null): { etat: Etat; devis: Devis } {
+  const p = etat.parametres;
+  const an = Number(dateIso.slice(0, 4));
+  const { numero, rang } = prochainNumero(
+    p.numerotation.prefixe,
+    an,
+    p.numerotation.compteurParAnnee[an] ?? 0,
+    etat.devis.map((d) => d.numero),
+  );
+  const client = etat.clients.find((c) => c.id === clientId);
+  const grilleId =
+    client?.grilleParDefautId && etat.grilles.some((g) => g.id === client.grilleParDefautId) ? client.grilleParDefautId : p.grilleParDefautId;
+  const maintenant = new Date().toISOString();
+  const devis: Devis = {
+    id: nouvelId(),
+    numero,
+    statut: 'brouillon',
+    dateEmission: dateIso,
+    validiteJours: p.validiteJours,
+    clientId: client ? client.id : null,
+    site: { nomCentrale: '', commune: '', departement: '', typeInstallation: null },
+    grilleId,
+    lignes: [],
+    remise: { type: 'pourcent', valeur: 0 },
+    conditionsPaiement: p.textes.conditionsPaiement,
+    periodeIntervention: '',
+    notesClient: '',
+    notesInternes: '',
+    estimation: { robot: 'L1', personnes: p.rendements.personnesParDefaut },
+    creeLe: maintenant,
+    modifieLe: maintenant,
+  };
+  return {
+    devis,
+    etat: {
+      ...etat,
+      devis: [...etat.devis, devis],
+      parametres: {
+        ...p,
+        numerotation: { ...p.numerotation, compteurParAnnee: { ...p.numerotation.compteurParAnnee, [an]: rang } },
+      },
+    },
+  };
+}
+
+/** Copie d'un devis : nouveau numéro, date du jour, statut brouillon ; client, site et lignes repris. */
+export function dupliquerDevis(etat: Etat, id: string, dateIso: string): { etat: Etat; devis: Devis | null } {
+  const source = etat.devis.find((d) => d.id === id);
+  if (!source) return { etat, devis: null };
+  const cree = creerDevis(etat, dateIso, source.clientId);
+  const copie: Devis = {
+    ...structuredClone(source),
+    id: cree.devis.id,
+    numero: cree.devis.numero,
+    statut: 'brouillon',
+    dateEmission: dateIso,
+    creeLe: cree.devis.creeLe,
+    modifieLe: cree.devis.modifieLe,
+    lignes: source.lignes.map((l) => ({ ...structuredClone(l), id: nouvelId() })),
+  };
+  return { devis: copie, etat: { ...cree.etat, devis: cree.etat.devis.map((d) => (d.id === copie.id ? copie : d)) } };
+}
+
+export function enregistrerDevis(etat: Etat, devis: Devis): Etat {
+  const d = { ...devis, modifieLe: new Date().toISOString() };
+  return { ...etat, devis: etat.devis.map((x) => (x.id === d.id ? d : x)) };
+}
+
+export function supprimerDevis(etat: Etat, id: string): Etat {
+  return { ...etat, devis: etat.devis.filter((d) => d.id !== id) };
 }

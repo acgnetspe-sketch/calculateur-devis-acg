@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDonnees } from './donnees/Donnees';
 import { Clients } from './ecrans/Clients';
+import { EcranDevis } from './ecrans/devis/EcranDevis';
 import { ListeDevis } from './ecrans/ListeDevis';
 import { Parametres } from './ecrans/Parametres';
 
@@ -12,25 +13,37 @@ const PAGES: { page: Page; libelle: string; icone: string }[] = [
   { page: 'parametres', libelle: 'Paramètres', icone: '⚙️' },
 ];
 
-/** Page affichée, lue dans l'adresse (#/clients) pour que le bouton « retour » fonctionne. */
-function pageDepuisAdresse(): Page {
-  const p = window.location.hash.replace(/^#\/?/, '');
-  return PAGES.some((x) => x.page === p) ? (p as Page) : 'devis';
+interface Adresse {
+  page: Page;
+  /** Identifiant du devis ouvert (#/devis/<id>). */
+  devisId?: string;
+}
+
+/** Page affichée, lue dans l'adresse (#/clients, #/devis/<id>) pour que le bouton « retour » fonctionne. */
+function lireAdresse(): Adresse {
+  const [p, id] = window.location.hash.replace(/^#\/?/, '').split('/');
+  if (p === 'devis' && id) return { page: 'devis', devisId: decodeURIComponent(id) };
+  return { page: PAGES.some((x) => x.page === p) ? (p as Page) : 'devis' };
+}
+
+function naviguer(adresse: string) {
+  window.location.hash = adresse;
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>(pageDepuisAdresse);
+  const [adresse, setAdresse] = useState<Adresse>(lireAdresse);
+  const page = adresse.page;
   const { enregistrementOk } = useDonnees();
 
   useEffect(() => {
-    const ecouter = () => setPage(pageDepuisAdresse());
+    const ecouter = () => setAdresse(lireAdresse());
     window.addEventListener('hashchange', ecouter);
     return () => window.removeEventListener('hashchange', ecouter);
   }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [page]);
+  }, [page, adresse.devisId]);
 
   return (
     <div className="app">
@@ -58,7 +71,8 @@ export default function App() {
         </div>
       )}
       <main className="contenu">
-        {page === 'devis' && <ListeDevis />}
+        {page === 'devis' && !adresse.devisId && <ListeDevis naviguer={naviguer} />}
+        {page === 'devis' && adresse.devisId && <EcranDevis key={adresse.devisId} id={adresse.devisId} naviguer={naviguer} />}
         {page === 'clients' && <Clients />}
         {page === 'parametres' && <Parametres />}
       </main>
